@@ -62,6 +62,16 @@ Object.entries(VERI.bitkiler).forEach(([ad, haller]) => haller.forEach((yolu, i)
 Object.entries(VERI.calisanlar).forEach(([ad, c]) => { k.loadSprite("calisan-" + ad, c.resim); k.loadSprite("calisan-" + ad + "-konus", c.konus); });
 // Karakter simgeleri için her karakterin tam resmi. Simgede sadece başı görünür.
 Object.entries(VERI.karakterler).forEach(([id, s]) => k.loadSprite("portre-" + id, s.resim));
+Object.entries(VERI.cikartmalar).forEach(([id, yolu]) => k.loadSprite("cikartma-" + id, yolu));
+
+// Albümdeki bütün çıkartmalar: özel olanlar, mekan simgeleri, eylemi olan eşyalar.
+const IH = VERI.ihtiyaclar;
+const CIKARTMALAR = [
+  ...Object.keys(VERI.cikartmalar).map((id) => ({ id, resim: "cikartma-" + id })),
+  ...[...new Set(Object.values(VERI.mekanlar).filter((m) => m.tur !== "dunya" && m.simge).map((m) => m.simge))].map((s) => ({ id: "mekan:" + s, resim: "simge-" + s })),
+  ...Object.entries(VERI.esyalar).filter(([, e]) => e.resim && (e.eylem || e.yenir || e.sil || e.sepet || e.mama)).map(([id]) => ({ id: "esya:" + id, resim: "esya-" + id })),
+];
+dunya.cikartma = dunya.cikartma || {}; // açılan çıkartmalar
 
 function mekanResimleri(id) {
   const m = VERI.mekanlar[id], r = [];
@@ -369,6 +379,7 @@ k.scene("mekan", (mekanId) => {
     o.eylemTur = !o.kr && VERI.esyalar[v.sablon].eylem;
     o.evcil = o.kr && VERI.karakterler[v.sablon].evcil;
     o.isirik = 0;
+    if (o.kr) ihtiyacKur(o);
     return o;
   }
   // Kayıtta küvette olanları yerine koy.
@@ -447,8 +458,9 @@ k.scene("mekan", (mekanId) => {
   function kuveteGir(o, kv) {
     const yer = kv.yerler.filter((y) => !y.dolu).sort((a, b) => Math.abs(a.x - o.v.x) - Math.abs(b.x - o.v.x))[0];
     if (!yer) return false;
-    o.kuvet = { kv, yer }; yer.dolu = o; o.kuvetT = k.time();
+    o.kuvet = { kv, yer }; yer.dolu = o; o.kuvetT = k.time(); o.yikandi = false;
     o.v.kuvet = kv.yerler.indexOf(yer);
+    kazan("banyo");
     o.hedef = null; o.vy = 0; o.zemY = z.ust; o.v.x = yer.x; o.v.y = z.ust;
     for (let i = 0; i < 12; i++) G.kopuk(yer.x + k.rand(-70, 70), kv.su + k.rand(-6, 6));
     SES.sicrama();
@@ -477,8 +489,10 @@ k.scene("mekan", (mekanId) => {
     o.hedef = null; o.vy = 0; o.vx = 0; o.h = 0; o.zemY = z.ust;
     const yer = n.oturma || n.yatis || n.asma;
     o.v.x = yer.x; o.v.y = z.ust;
-    o.oturT = k.time();
+    o.oturT = k.time(); o.dinlendi = false;
     if (n.tur === "klozet") o.sansur = G.sansur();
+    if (kayit && n.tur === "yatak") kazan("uyu");
+    if (kayit && n.tur === "salincak") { kazan("salincak"); ihtiyacGider(o, "oyun"); }
     if (n.tur === "yatak") {
       // Yorgan karakterin bacaklarını örter.
       const y = n.yorgan;
@@ -509,6 +523,8 @@ k.scene("mekan", (mekanId) => {
   function kaymayaBasla(o, n) {
     o.kayiyor = { n, t0: k.time() };
     SES.kay();
+    kazan("kaydirak");
+    ihtiyacGider(o, "oyun");
     o.hedef = null; o.vy = 0; o.vx = 0; o.h = 0;
   }
 
@@ -556,6 +572,7 @@ k.scene("mekan", (mekanId) => {
     kaydet();
   }
   function kaldir(o) {
+    if (o.ihBalon) o.ihBalon.destroy();
     varliklar.splice(varliklar.indexOf(o), 1);
     o.kok.destroy();
     o.golge.destroy();
@@ -597,6 +614,7 @@ k.scene("mekan", (mekanId) => {
     if (o.yuzey) yuzeydenAl(o);
     o.giyili = sahip; o.v.giyili = sahip.v.id;
     SES.giy();
+    kazan("esya:" + o.v.sablon);
     o.h = 0; o.vy = 0; o.vx = 0;
     const s = olcek(sahip);
     for (let i = 0; i < 6; i++) G.parilti(sahip.kok.pos.x + k.rand(-60, 60) * s * 2, sahip.kok.pos.y - k.rand(0.2, 0.9) * sahip.kr.yukseklik * s);
@@ -648,6 +666,7 @@ k.scene("mekan", (mekanId) => {
       k.wait(0.2, () => isik.destroy());
       G.parilti(n.okut.x, n.okut.y - 10, [255, 80, 80]);
     }));
+    kazan("alisveris");
     const toplam = urunler.reduce((a, u) => a + fiyat(u), 0);
     k.wait(0.4 + urunler.length * 0.5, () => {
       if (calisan) calisanKonus(urunler.length > 1 ? `${urunler.length} ürün. Toplam ${toplam} lira. Teşekkürler!` : `Bip! ${toplam} lira. Teşekkürler!`);
@@ -666,6 +685,7 @@ k.scene("mekan", (mekanId) => {
     if (o.elde) eldenBirak(o);
     if (o.yuzey) yuzeydenAl(o);
     o.sepette = b; o.v.sepet = b.v.id; o.v.sx = yer;
+    kazan("esya:sepet");
     o.h = 0; o.vy = 0; o.vx = 0;
     SES.pop();
     if (b.yuzey && b.yuzey.tur === "kasa") okut(o, b.yuzey);
@@ -701,6 +721,8 @@ k.scene("mekan", (mekanId) => {
       kaldir(o);
       dunya.varliklar.splice(dunya.varliklar.indexOf(o.v), 1);
       kalpCikar(sahip);
+      kazan("esya:" + o.v.sablon);
+      if (varliklar.includes(sahip)) ihtiyacGider(sahip, "aclik");
       kaydet();
     };
     k.wait(0.35, isir);
@@ -717,6 +739,8 @@ k.scene("mekan", (mekanId) => {
     k.tween(0, 1, 1, (t) => { kl.pos.y -= 1; kl.opacity = 1 - t; }).onEnd(() => kl.destroy());
   }
   // Eşyanın hareketi. Yiyecek yenir; atılan eşya fırlar; diğerleri elde bir süre oynatılır.
+  // Bu eylemler oyun ihtiyacını giderir.
+  const OYUN_EYLEM = ["at", "sur", "sektir", "ucur", "birak", "saril", "sik", "kumanda"];
   const EYLEM_SURE = { konus: 2.4, oku: 2.6, ic: 1.8, fircala: 2.2, yaz: 2.6, yika: 2.4, kurula: 2.2, sik: 1.2, dinle: 2.4, tara: 2.4, kurut: 2.4, sula: 2.6, kaz: 2.0, kokla: 2.0, karistir: 2.4, kumanda: 1.0,
     olc: 2.4, yapistir: 1.4, kes: 2.4, bak: 2.4, ucur: 4.5, birak: 3.4, saril: 2.2, ufle: 1.6, sektir: 3.0, dok: 1.8 };
   function eylemYap(sahip, o, vardi = false) {
@@ -724,6 +748,9 @@ k.scene("mekan", (mekanId) => {
     const tur = o.eylemTur;
     if (!tur || o.eylem || o.yeniyor) return;
     if (tur === "giy") return giydir(sahip, o);
+    kazan("esya:" + o.v.sablon);
+    if (OYUN_EYLEM.includes(tur)) ihtiyacGider(sahip, "oyun");
+    if (tur === "yika" || tur === "fircala") ihtiyacGider(sahip, "temiz");
     eleVer(sahip, o);
     sahip.hedef = null;
     // Sulama kabını tutan karakter en yakın çiçeğin yanına yürür, ona döner ve sular.
@@ -825,7 +852,8 @@ k.scene("mekan", (mekanId) => {
         if (++n < 4) return k.wait(0.5, isir);
         kap.yeniyor = false;
         donustur(kap, VERI.esyalar[kap.v.sablon].sonra);
-        if (varliklar.includes(o)) kalpCikar(o);
+        kazan("mama"); kazan("esya:mama-kabi");
+        if (varliklar.includes(o)) { kalpCikar(o); ihtiyacGider(o, "aclik"); }
         kaydet();
       };
       k.wait(0.3, isir);
@@ -921,6 +949,12 @@ k.scene("mekan", (mekanId) => {
     sesCizgi = o.add([k.rect(52, 6, { radius: 3 }), k.anchor("center"), k.rotate(-45), k.color(230, 60, 60), k.fixed()]);
   }, "ses");
   sesCizgi.hidden = SES.acik();
+  // Albüm düğmesi: ses düğmesinin yanında, yıldızlı pembe kitap.
+  dugme(140, EKRAN_H - 50, (o) => {
+    o.add([k.circle(32), k.color(255, 255, 255), k.outline(4, KALEM), k.opacity(0.85), k.fixed()]);
+    o.add([k.rect(34, 40, { radius: 5 }), k.anchor("center"), k.color(240, 110, 160), k.outline(3, KALEM), k.fixed()]);
+    o.add([k.sprite("cikartma-yardim", { width: 22, height: 22 }), k.anchor("center"), k.fixed()]);
+  }, "album");
   function sesDugmesi() { SES.baslat(); sesCizgi.hidden = SES.acKapa(); }
   // Ortam sesi: haritada şehir, bahçe ve parkta kuşlar, odada sessizlik.
   SES.ortam(harita ? "sehir" : z.ufuk ? null : "bahce");
@@ -1039,6 +1073,8 @@ k.scene("mekan", (mekanId) => {
     const n = noktaBul(p, ["tahta"]);
     if (!n) { cizgi = null; return; }
     if (k.time() > tebesirSes) { tebesirSes = k.time() + 0.12; SES.tebesir(); }
+    kazan("esya:" + o.v.sablon);
+    if (e.ciz) kazan("tahta");
     if (e.ciz) {
       if (!cizgi || cizgi.tahta !== n) { cizgi = { tahta: n, c: { r: e.ciz, n: [] } }; n.cizgiler.push(cizgi.c); }
       const son = cizgi.c.n[cizgi.c.n.length - 1];
@@ -1065,6 +1101,15 @@ k.scene("mekan", (mekanId) => {
   k.onMousePress(() => {
     SES.baslat();
     const e = ekran();
+    // Albüm açıkken: oklar sayfa çevirir, başka yere dokununca albüm kapanır.
+    if (album) {
+      albumTik = true;
+      const n = album.sayfaSayi;
+      if (n > 1 && e.dist(k.vec2(125, 380)) < 50) return albumAc((albumSayfa + n - 1) % n);
+      if (n > 1 && e.dist(k.vec2(1155, 380)) < 50) return albumAc((albumSayfa + 1) % n);
+      album.destroy(); album = null;
+      return;
+    }
     basiliDugme = dugmeBul(e);
     if (basiliDugme) { if (basiliDugme.tur === "kaydir") panYon = basiliDugme.yon; return; }
     const p = fare();
@@ -1078,7 +1123,7 @@ k.scene("mekan", (mekanId) => {
   });
 
   k.onMouseMove(() => {
-    if (basiliDugme) return;
+    if (basiliDugme || album || albumTik) return;
     if (kaydirma) {
       const dx = ekran().x - kaydirma.x0, dy = ekran().y - kaydirma.y0;
       if (!kaydiriyor && Math.hypot(dx, dy) > SURUKLE_ESIGI) kaydiriyor = true;
@@ -1106,11 +1151,13 @@ k.scene("mekan", (mekanId) => {
   });
 
   k.onMouseRelease(() => {
+    if (albumTik) { albumTik = false; return; }
     if (basiliDugme) {
       const d = basiliDugme;
       basiliDugme = null; panYon = 0;
       if (d.tur === "harita") return disariCik();
       if (d.tur === "ses") return sesDugmesi();
+      if (d.tur === "album") return albumAc(0);
       if (d.tur === "zum") { zumla(zum * (d.yon > 0 ? 1.4 : 1 / 1.4)); return kaydet(); }
       if (d.tur === "karakter") karaktereGit(d.id);
       return;
@@ -1129,6 +1176,7 @@ k.scene("mekan", (mekanId) => {
       o.hal = "dur";
       const d = kapiBul(p) || yerBul(p);
       if (d) return kapidanGec(o, d);
+      if (!o.kr && istek && calisanUstunde(p)) return istegeVer(o);
       if (!o.kr && mamaDok(o, p)) return;
       if (!o.kr && sepeteKoy(o, p)) return;
       if (!o.kr && karakteraBirak(o, p)) return;
@@ -1172,6 +1220,7 @@ k.scene("mekan", (mekanId) => {
     if (o && o.yuzey) { o.salla = k.time() + 0.5; if (o.goz) acKapa(o.goz.ates, o.goz.anahtar, true); return; }
     if (o && o.yuzuyor) { SES.kopuk(); for (let i = 0; i < 4; i++) G.kopuk(o.v.x + k.rand(-20, 20), o.yuzuyor.su); return; }
     if (o) { o.vy = -700; o.h = Math.max(o.h, 1); SES.zipla(); return; } // eşya zıplar
+    if (calisanUstunde(p) && istek) return calisanKonus(`Bana ${VERI.adlar[istek.sablon] || "bunu"} getirir misin?`);
     if (calisanUstunde(p)) { calisan.sira = (calisan.sira + 1) % calisan.sozler.length; return calisanKonus(calisan.sozler[calisan.sira]); }
     const bk = bitkiBul(p);
     if (bk) { SES.pop(); bk.salla = k.time() + 0.8; if (bk.hal >= 2) kucukKalp(k.vec2(bk.x, bk.y - bk.sp.height * bk.s)); return; }
@@ -1192,6 +1241,162 @@ k.scene("mekan", (mekanId) => {
     }
     if (secili && !secili.oturak && !secili.kuvet) yuru(secili, p);
   });
+
+  // --- Çıkartma albümü ---
+  // Yeni çıkartma açılınca ekranın üstünden bir bildirim iner.
+  const bildirimler = [];
+  let bildirimVar = false;
+  function kazan(id) {
+    if (dunya.cikartma[id] || !CIKARTMALAR.some((c) => c.id === id)) return;
+    dunya.cikartma[id] = true;
+    kaydet();
+    bildirimler.push(id);
+    if (!bildirimVar) bildirimGoster();
+  }
+  function bildirimGoster() {
+    const id = bildirimler.shift();
+    bildirimVar = !!id;
+    if (!id) return;
+    const c = CIKARTMALAR.find((c) => c.id === id);
+    SES.buyu();
+    // Bildirim alttan çıkar: üstte çalışanın konuşma balonu olabilir.
+    const b = k.add([k.pos(EKRAN_W / 2, EKRAN_H + 80), k.fixed(), k.z(8000)]);
+    b.add([k.rect(340, 110, { radius: 24 }), k.anchor("center"), k.color(255, 255, 255), k.outline(5, KALEM), k.fixed()]);
+    b.add([k.circle(44), k.pos(-110, 0), k.anchor("center"), k.color(255, 235, 150), k.fixed()]);
+    const sp = b.add([k.sprite(c.resim), k.pos(-110, 0), k.anchor("center"), k.fixed()]);
+    sp.scale = k.vec2(74 / Math.max(sp.width, sp.height));
+    b.add([k.text("Yeni çıkartma!", { size: 30, font: "sans-serif" }), k.pos(-50, 0), k.anchor("left"), k.color(70, 50, 40), k.fixed()]);
+    k.tween(EKRAN_H + 80, EKRAN_H - 85, 0.45, (y) => (b.pos.y = y), k.easings.easeOutBack).onEnd(() =>
+      k.wait(1.8, () => k.tween(EKRAN_H - 85, EKRAN_H + 90, 0.3, (y) => (b.pos.y = y)).onEnd(() => { b.destroy(); bildirimGoster(); })));
+  }
+  // Albüm: sayfa sayfa çıkartmalar. Açılmayan çıkartma gölge olarak görünür.
+  const SAYFA = 40;
+  let album = null, albumSayfa = 0, albumTik = false;
+  function albumAc(sayfa) {
+    if (album) album.destroy();
+    SES.dolap();
+    albumSayfa = sayfa;
+    album = k.add([k.pos(0, 0), k.fixed(), k.z(8500)]);
+    album.add([k.rect(EKRAN_W, EKRAN_H), k.color(30, 20, 15), k.opacity(0.55), k.fixed()]);
+    album.add([k.rect(1120, 640, { radius: 30 }), k.pos(EKRAN_W / 2, EKRAN_H / 2), k.anchor("center"), k.color(255, 248, 230), k.outline(6, KALEM), k.fixed()]);
+    const acik = CIKARTMALAR.filter((c) => dunya.cikartma[c.id]).length;
+    album.add([k.text(`Çıkartma albümüm: ${acik} / ${CIKARTMALAR.length}`, { size: 36, font: "sans-serif" }), k.pos(EKRAN_W / 2, 90), k.anchor("center"), k.color(70, 50, 40), k.fixed()]);
+    CIKARTMALAR.slice(sayfa * SAYFA, (sayfa + 1) * SAYFA).forEach((c, i) => {
+      const x = 205 + (i % 10) * 97, y = 185 + Math.floor(i / 10) * 118, var_ = dunya.cikartma[c.id];
+      album.add([k.circle(44), k.pos(x, y), k.anchor("center"), k.color(255, 255, 255), k.outline(3, k.rgb(215, 195, 165)), k.fixed()]);
+      const sp = album.add([k.sprite(c.resim), k.pos(x, y), k.anchor("center"), k.fixed(), ...(var_ ? [] : [k.color(0, 0, 0), k.opacity(0.15)])]);
+      sp.scale = k.vec2(66 / Math.max(sp.width, sp.height));
+    });
+    album.sayfaSayi = Math.ceil(CIKARTMALAR.length / SAYFA);
+    if (album.sayfaSayi > 1) {
+      for (const yon of [-1, 1]) {
+        const x = yon < 0 ? 125 : 1155;
+        album.add([k.circle(34), k.pos(x, 380), k.anchor("center"), k.color(255, 210, 50), k.outline(4, KALEM), k.fixed()]);
+        album.add([k.polygon([k.vec2(-12 * yon, -18), k.vec2(16 * yon, 0), k.vec2(-12 * yon, 18)]), k.pos(x, 380), k.color(70, 50, 40), k.fixed()]);
+      }
+      album.add([k.text(`${sayfa + 1} / ${album.sayfaSayi}`, { size: 28, font: "sans-serif" }), k.pos(EKRAN_W / 2, 655), k.anchor("center"), k.color(120, 95, 75), k.fixed()]);
+    }
+  }
+  // Mekana ilk gelişte o yerin çıkartması açılır.
+  if (!harita && m.simge) k.wait(1.2, () => kazan("mekan:" + m.simge));
+
+  // --- İhtiyaçlar: acıkma, oyun, temizlik, uyku ---
+  // Son giderildiği zaman kayıtta durur (gerçek saat). Süresi geçen ihtiyaç karakterin başında balonla görünür.
+  function ihTurleri(o) { return o.evcil ? ["aclik"] : Object.keys(IH); }
+  function ihtiyacKur(o) {
+    o.v.ih = o.v.ih || {};
+    // İlk kurulumda ihtiyaçlar farklı zamanlarda gelsin diye başlangıçlar dağılır.
+    for (const t of ihTurleri(o)) if (!o.v.ih[t]) o.v.ih[t] = Date.now() - Math.random() * IH[t].dakika * 30000;
+  }
+  function ihtiyacVar(o, t) { return Date.now() - o.v.ih[t] > IH[t].dakika * 60000; }
+  function ihtiyacGider(o, tur) {
+    if (!o || !o.kr || !o.v.ih || !(tur in o.v.ih)) return;
+    const vardi = ihtiyacVar(o, tur);
+    o.v.ih[tur] = Date.now();
+    if (vardi) {
+      kalpCikar(o);
+      SES.buyu();
+      for (let i = 0; i < 6; i++) G.parilti(o.kok.pos.x + k.rand(-50, 50), o.kok.pos.y - k.rand(0.3, 1) * o.kr.yukseklik * olcek(o));
+      kazan("bakim");
+    }
+    kaydet();
+  }
+  function enAcil(o) {
+    let en = null, fark = 1;
+    for (const t of ihTurleri(o)) {
+      const f = (Date.now() - o.v.ih[t]) / (IH[t].dakika * 60000);
+      if (f > fark) { fark = f; en = t; }
+    }
+    return en;
+  }
+  function ihBalonKur(tur) {
+    const b = k.add([k.pos(0, 0), k.z(0), k.scale(1)]);
+    b.add([k.polygon([k.vec2(-8, 20), k.vec2(8, 20), k.vec2(-14, 40)]), k.color(255, 255, 255), k.outline(3, KALEM)]);
+    b.add([k.circle(30), k.anchor("center"), k.color(255, 255, 255), k.outline(3, KALEM)]);
+    const sp = b.add([k.sprite(IH[tur].simge), k.anchor("center")]);
+    sp.scale = k.vec2(38 / Math.max(sp.width, sp.height));
+    b.tur = tur;
+    return b;
+  }
+  function ihBalonGuncelle(o, t) {
+    const tur = harita || o.kuvet || (o.oturak && o.oturak.tur === "yatak") || o.kayiyor ? null : enAcil(o);
+    if (o.ihBalon && o.ihBalon.tur !== tur) { o.ihBalon.destroy(); o.ihBalon = null; }
+    if (!tur) return;
+    if (!o.ihBalon) { o.ihBalon = ihBalonKur(tur); SES.pop(); }
+    const s = olcek(o), b = o.ihBalon;
+    b.pos = k.vec2(o.kok.pos.x - o.kr.genislik * s * 0.32, o.kok.pos.y - o.kr.yukseklik * s - 30 + Math.sin(t * 3) * 5);
+    b.z = o.kok.z + 1;
+    b.scale = k.vec2(Math.min(1, 0.6 + s * 0.5));
+  }
+
+  // --- İstekler: çalışan ara sıra bir eşya ister. Getirilince hediye verir. ---
+  const istekListe = calisan && VERI.istekler[calisan.meslek];
+  let istek = null, istekZaman = k.time() + k.rand(12, 25);
+  function istekBaslat() {
+    const sablon = k.choose(istekListe);
+    istek = { sablon, bitis: k.time() + 120 };
+    const b = istek.balon = k.add([k.pos(calisan.x + calisan.boy * 0.2, calisan.y - calisan.boy * 0.95), k.z(calisan.y + 1)]);
+    b.add([k.polygon([k.vec2(-10, 26), k.vec2(10, 26), k.vec2(-22, 52)]), k.color(255, 255, 255), k.outline(4, KALEM)]);
+    b.add([k.circle(40), k.anchor("center"), k.color(255, 255, 255), k.outline(4, KALEM)]);
+    const sp = b.add([k.sprite("esya-" + sablon), k.anchor("center")]);
+    sp.scale = k.vec2(52 / Math.max(sp.width, sp.height));
+    istek.y0 = b.pos.y;
+    calisanKonus(`Bana ${VERI.adlar[sablon] || "bunu"} getirir misin?`);
+  }
+  function istekBitir() {
+    if (istek) istek.balon.destroy();
+    istek = null;
+    istekZaman = k.time() + k.rand(30, 60);
+  }
+  function istegeVer(o) {
+    const dogru = o.v.sablon === istek.sablon || o.v.sablon.startsWith(istek.sablon + "-");
+    if (!dogru) return calisanKonus(`Hmm, ben ${VERI.adlar[istek.sablon] || "başka bir şey"} istemiştim.`);
+    kaldir(o);
+    const i = dunya.varliklar.indexOf(o.v);
+    if (i >= 0) dunya.varliklar.splice(i, 1);
+    SES.buyu();
+    for (let j = 0; j < 8; j++) G.parilti(calisan.x + k.rand(-60, 60), calisan.y - k.rand(0.3, 1) * calisan.boy);
+    calisanKonus("Çok teşekkürler! Bu da sana hediye.");
+    dunya.yardim = (dunya.yardim || 0) + 1;
+    kazan("yardim");
+    if (dunya.yardim >= 5) kazan("yardim5");
+    istekBitir();
+    k.wait(0.8, hediyeVer);
+    kaydet();
+  }
+  // Hediye çalışanın yanına, odanın ortasına doğru düşer. Kaybolmaz.
+  function hediyeVer() {
+    const sablon = k.choose(VERI.hediyeler), yan = calisan.x > EKRAN_W / 2 ? -1 : 1;
+    const v = { id: "hediye" + Date.now() + "h", tur: "esya", sablon, mekan: mekanId, x: calisan.x + yan * 140, y: zemineSabitle(calisan.y + 40) };
+    dunya.varliklar.push(v);
+    dunya.bilinen.push(v.id);
+    const o = varlikKur(v);
+    varliklar.push(o);
+    o.h = 260; o.vy = -300;
+    SES.pop();
+    for (let j = 0; j < 6; j++) G.parilti(v.x + k.rand(-40, 40), v.y - 260 - k.rand(0, 40));
+    kaydet();
+  }
 
   // --- Her kare ---
   const kaybolacak = [];
@@ -1341,6 +1546,15 @@ k.scene("mekan", (mekanId) => {
       else if (o.giyili) giyiliGuncelle(o);
     }
     for (const o of varliklar) if (o.sepette) sepetIciGuncelle(o, t);
+    for (const o of varliklar) if (o.kr) ihBalonGuncelle(o, t);
+    // İstek: bir karakter varken çalışan ara sıra bir şey ister. İstek bir süre sonra kendiliğinden biter.
+    if (istekListe) {
+      if (!istek && t > istekZaman && varliklar.some((o) => o.kr && !o.evcil)) istekBaslat();
+      if (istek) {
+        istek.balon.pos.y = istek.y0 + Math.sin(t * 3) * 6;
+        if (t > istek.bitis) istekBitir();
+      }
+    }
     // Sepetteki eşya sepetin ağzında durur, altı sepetin arkasında kalır.
     function sepetIciGuncelle(o, t) {
       const b = o.sepette, sc = Math.abs(b.kok.scale.y), s = sc * 0.85;
@@ -1563,6 +1777,7 @@ k.scene("mekan", (mekanId) => {
         o.kok.angle = 90 * (n.yon || 1); // yon -1: yastık solda
         o.kok.scale = k.vec2(sy * 0.55 * (1 + Math.sin(t * 1.8) * 0.03), sy);
         K.canlandir(o.kr, t, "uyu");
+        if (t - o.oturT > 3 && !o.dinlendi) { o.dinlendi = true; ihtiyacGider(o, "uyku"); }
         o.uyku -= dt;
         if (o.uyku <= 0) { o.uyku = 1.1; G.zzz(n.yatis.x + (n.yon || 1) * n.uzunluk * 0.95, n.yatis.y - 60); }
         return;
@@ -1626,6 +1841,7 @@ k.scene("mekan", (mekanId) => {
       o.kok.angle = Math.sin(t * 1.5 + yer.x) * 3;
       o.kok.scale = k.vec2(s * o.yon, s);
       K.canlandir(o.kr, t, t < o.salla ? "salla" : "dur");
+      if (t - o.kuvetT > 3 && !o.yikandi) { o.yikandi = true; ihtiyacGider(o, "temiz"); }
       o.kopukSayac = (o.kopukSayac || 0) - dt;
       if (o.kopukSayac <= 0) { o.kopukSayac = 0.18; G.kopuk(yer.x + k.rand(-65, 65), kv.su + k.rand(-4, 4)); }
     }

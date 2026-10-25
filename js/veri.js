@@ -189,6 +189,54 @@ window.OYUN_VERI = {
     gorevli: { resim: "cizimler/calisan/gorevli.png", konus: "cizimler/calisan/gorevli-konus.png" },
   },
 
+  // --- Oyunun amacı: çıkartma albümü, karakter ihtiyaçları, mahalleliden istekler ---
+  // Çıkartma albümü: her yeni şey bir çıkartma açar. Albümde açılmayanlar gölge olarak görünür.
+  // Sıra: önce bu özel çıkartmalar, sonra mekan simgeleri (gidilince), sonra eşyalar (eylemi yapılınca).
+  cikartmalar: {
+    uyu: "cizimler/cikartma/uyu.png", // yatakta uyumak
+    banyo: "cizimler/cikartma/banyo.png", // küvete girmek
+    kaydirak: "cizimler/cikartma/kaydirak.png",
+    salincak: "cizimler/cikartma/salincak.png",
+    tahta: "cizimler/cikartma/tahta.png", // tahtaya tebeşirle çizmek
+    alisveris: "cizimler/cikartma/kasa.png", // kasada okutmak
+    mama: "cizimler/cikartma/pati.png", // evcil hayvan mamasını yer
+    bakim: "cizimler/cikartma/kalp.png", // bir ihtiyacı gidermek
+    yardim: "cizimler/cikartma/yildiz.png", // bir isteği yerine getirmek
+    yardim5: "cizimler/cikartma/kupa.png", // beş isteği yerine getirmek
+  },
+  // İhtiyaçlar: bu kadar dakika geçince karakterin başında simge çıkar. Ceza yoktur.
+  // simge: balonda görünen resim. Evcil hayvanın sadece açlığı vardır.
+  ihtiyaclar: {
+    aclik: { dakika: 3, simge: "esya-elma" },
+    oyun: { dakika: 4, simge: "esya-top" },
+    temiz: { dakika: 6, simge: "esya-sabun" },
+    uyku: { dakika: 8, simge: "cikartma-uyu" },
+  },
+  // İstekler: çalışan ara sıra bir eşya ister. Getirilince teşekkür eder, hediye verir.
+  // istekler: meslek -> istenebilen eşyalar. adlar: konuşmada eşyanın adı.
+  istekler: {
+    kasiyer: ["elma", "muz", "ekmek", "peynir", "sut", "havuc"],
+    garson: ["kurabiye", "cay", "ekmek", "kupa"],
+    pastaci: ["pasta", "kurabiye", "dondurma", "cilek"],
+    doktor: ["termometre", "surup", "yara-bandi", "havlu"],
+    kuafor: ["tarak", "makas", "ayna", "fon", "sampuan"],
+    kutuphaneci: ["kitap"],
+    ogretmen: ["kitap", "tebesir", "boya", "silgi"],
+    oyuncakci: ["ayi", "tren", "top", "araba", "ordek"],
+    bahcivan: ["cicek", "sulama-kabi", "kova"],
+    gorevli: ["top", "kova", "zipzip"],
+  },
+  adlar: {
+    elma: "bir elma", muz: "bir muz", ekmek: "bir ekmek", peynir: "biraz peynir", sut: "bir şişe süt", havuc: "bir havuç",
+    kurabiye: "bir kurabiye", cay: "bir bardak çay", kupa: "bir kupa", pasta: "bir dilim pasta", dondurma: "bir dondurma", cilek: "bir çilek",
+    termometre: "termometreyi", surup: "şurubu", "yara-bandi": "bir yara bandı", havlu: "bir havlu",
+    tarak: "tarağı", makas: "makası", ayna: "aynayı", fon: "fön makinesini", sampuan: "şampuanı",
+    kitap: "bir kitap", tebesir: "bir tebeşir", boya: "bir boya kalemi", silgi: "silgiyi",
+    ayi: "oyuncak ayıyı", tren: "oyuncak treni", top: "bir top", araba: "oyuncak arabayı", ordek: "lastik ördeği",
+    cicek: "bir çiçek", "sulama-kabi": "sulama kabını", kova: "kovayı", zipzip: "zıp zıp topu",
+  },
+  hediyeler: ["balon", "sapka", "ayi", "dondurma", "cicek", "kurabiye", "zipzip", "ucurtma", "elbise-mor", "tisort-sari"],
+
   // Mekanlar. Her mekanın kimliği anahtarıdır.
   //   ad: tabelada görünen ad. simge: cizimler/simge/<simge>.png. ev: bağlı olduğu ev (varsa).
   //   resim: arka plan. zemin: karakterlerin durduğu bant. giris: haritadan girince karakterin yeri.

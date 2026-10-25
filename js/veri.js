@@ -54,6 +54,12 @@ window.OYUN_VERI = {
       agiz: 0.5, agizX: 0.42, el: [0.42, 0.5], portre: [0.5, 0, 0.5, 0.6],
       giyim: { govde: [-0.1, 0.62, 0.5], alt: [-0.1, 0.45, 0.5], bas: [0.2, 0.86, 0.36] },
     },
+    // ses: dokununca çıkan ses. Köpek havlar (varsayılan), kedi mırlar.
+    pisi: {
+      resim: "cizimler/hacimli/pisi.png", boy: 120, evcil: true, eller: 1, ses: "mir",
+      agiz: 0.5, agizX: 0.37, el: [0.37, 0.5], portre: [0.55, 0, 0.45, 0.62],
+      giyim: { govde: [-0.1, 0.66, 0.5], alt: [-0.1, 0.48, 0.5], bas: [0.27, 0.92, 0.32] },
+    },
   },
   esyalar: {
     // resim: eşyanın PNG dosyası. boy: ekranın önündeki piksel boyu.
@@ -64,6 +70,9 @@ window.OYUN_VERI = {
     //   olc, yapistir, kes, bak, ucur, birak, saril, ufle.
     // damla: içerken ağızdan düşen damlanın rengi. buhar: içerken buhar çıkar. ipli: elde ipinin ucundan tutulur.
     // sonra: eylem bitince eşya bu eşyaya dönüşür (mumu sönen pasta).
+    // ciz: tahtaya sürtülünce bu renkte çizer (tebeşir). sil: tahtadaki çizgiyi siler.
+    // sepet: içine eşya konur, eşyalar sepetle taşınır.
+    // mama: evcil hayvan gelip yer, kap "sonra" eşyasına döner. bos: boş kap. Mama dökülünce bu eşyaya döner.
     //   giy: karakter üstüne giyer. giy değeri yeridir: govde, alt (pantolon) ya da bas.
     // ocak: ocağın gözüne konabilir. kirilir: hızlı düşünce cam sesi çıkarır.
     top: { resim: "cizimler/esya/top.png", boy: 74, eylem: "at" },
@@ -117,6 +126,16 @@ window.OYUN_VERI = {
     "sicak-cikolata": { resim: "cizimler/esya/sicak-cikolata.png", boy: 48, eylem: "ic", damla: [120, 70, 40], buhar: true },
     "dogum-gunu-pastasi": { resim: "cizimler/esya/dogum-gunu-pastasi.png", boy: 78, eylem: "ufle", sonra: "dogum-gunu-pastasi-sonuk" },
     "dogum-gunu-pastasi-sonuk": { resim: "cizimler/esya/dogum-gunu-pastasi-sonuk.png", boy: 68, yenir: [255, 225, 235] },
+    tebesir: { resim: "cizimler/esya/tebesir.png", boy: 12, eylem: "yaz", ciz: [250, 250, 245] },
+    "tebesir-pembe": { resim: "cizimler/esya/tebesir-pembe.png", boy: 12, eylem: "yaz", ciz: [250, 160, 200] },
+    "tebesir-mavi": { resim: "cizimler/esya/tebesir-mavi.png", boy: 12, eylem: "yaz", ciz: [140, 200, 250] },
+    silgi: { resim: "cizimler/esya/silgi.png", boy: 24, sil: true },
+    zipzip: { resim: "cizimler/esya/zipzip.png", boy: 46, eylem: "sektir" },
+    sepet: { resim: "cizimler/esya/sepet.png", boy: 80, sepet: true },
+    "mama-kabi": { resim: "cizimler/esya/mama-kabi.png", boy: 32, mama: true, sonra: "mama-kabi-bos" },
+    "mama-kabi-bos": { resim: "cizimler/esya/mama-kabi-bos.png", boy: 26, bos: "mama-kabi" },
+    "mama-paketi": { resim: "cizimler/esya/mama-paketi.png", boy: 56, eylem: "dok" },
+    kemik: { resim: "cizimler/esya/kemik.png", boy: 26, yenir: [250, 240, 215] },
     // boya: giyince karakterin kendi kıyafetinin hangi bölgeleri bu renge boyanır (karakterin "kiyafet" verisi).
     elbise: { resim: "cizimler/esya/elbise.png", boy: 150, eylem: "giy", giy: "govde", boya: ["ust", "alt"], renk: [245, 120, 170] },
     "elbise-mor": { resim: "cizimler/esya/elbise-mor.png", boy: 150, eylem: "giy", giy: "govde", boya: ["ust", "alt"], renk: [165, 120, 230] },
@@ -460,6 +479,9 @@ window.OYUN_VERI = {
       },
       // Öğrenci sıralarının ve öğretmen masasının sandalyeleri.
       noktalar: [
+        // Kara tahta: tebeşir sürtülünce yazar, silgi siler. Tebeşir rafı sırayla beyaz, pembe, mavi verir.
+        { tur: "tahta", x: 495, y: 128, w: 295, h: 132 },
+        { tur: "raf", raflar: [{ sablon: "tebesir", x: 712, y: 270, sira: ["tebesir", "tebesir-pembe", "tebesir-mavi"] }, { sablon: "silgi", x: 530, y: 268 }] },
         sandalye(395, 460), sandalye(677, 460), sandalye(893, 460),
         sandalye(316, 609), sandalye(586, 612), sandalye(686, 609),
         sandalye(1181, 660),
@@ -515,9 +537,13 @@ window.OYUN_VERI = {
             { sablon: "sut", x: 370, y: 434 }, { sablon: "portakal-suyu", x: 455, y: 434 }, { sablon: "karpuz", x: 545, y: 434 },
             { sablon: "tahin", x: 685, y: 278 }, { sablon: "kurabiye", x: 765, y: 278 }, { sablon: "dondurma", x: 845, y: 278 },
             { sablon: "sabun", x: 685, y: 356 }, { sablon: "sampuan", x: 765, y: 356 }, { sablon: "dis-macunu", x: 845, y: 356 },
-            { sablon: "muz", x: 685, y: 434 }, { sablon: "elma", x: 765, y: 434 }, { sablon: "ekmek", x: 845, y: 434 },
+            { sablon: "mama-paketi", x: 685, y: 434 }, { sablon: "kemik", x: 765, y: 434 }, { sablon: "ekmek", x: 845, y: 434 },
+            // Kapının yanındaki sepetler.
+            { sablon: "sepet", x: 250, y: 372 },
           ],
         },
+        // Kasa: konan eşya "bip" diye okunur. Sepet konunca içindekiler tek tek okunur.
+        { tur: "kasa", x: 1025, y: 380, w: 125, h: 85, ust: 440, okut: { x: 1060, y: 412 } },
       ],
     },
 
@@ -706,6 +732,11 @@ window.OYUN_VERI = {
       { id: "top2", tur: "esya", sablon: "top", mekan: "park", x: 560, y: 660 },
       { id: "ucurtma1", tur: "esya", sablon: "ucurtma", mekan: "park", x: 680, y: 640 },
       { id: "balon1", tur: "esya", sablon: "balon", mekan: "park", x: 760, y: 610 },
+      { id: "zipzip1", tur: "esya", sablon: "zipzip", mekan: "okul", x: 880, y: 660 },
+      { id: "pisi1", tur: "karakter", sablon: "pisi", mekan: "oda", x: 900, y: 650 },
+      { id: "mama1", tur: "esya", sablon: "mama-kabi", mekan: "oda", x: 1060, y: 680 },
+      { id: "mama2", tur: "esya", sablon: "mama-kabi", mekan: "bahce1", x: 1000, y: 680 },
+      { id: "kemik1", tur: "esya", sablon: "kemik", mekan: "bahce1", x: 560, y: 690 },
       { id: "kova2", tur: "esya", sablon: "kova", mekan: "oyun", x: 1100, y: 620 },
       { id: "boya2", tur: "esya", sablon: "boya", mekan: "okul", x: 500, y: 640 },
       { id: "kitap2", tur: "esya", sablon: "kitap", mekan: "okul", x: 760, y: 660 },

@@ -149,6 +149,14 @@ window.SES = (() => {
     at: () => hisirti(0.25, 600, 2000, "bandpass", 0.15),
     sur: () => ton(300, 340, 0.6, "sawtooth", 0.04),
     yaz: (s) => { for (let i = 0; i < 8; i++) hisirti(0.05, 4000, 4000, "bandpass", 0.08, i * s / 8, 2); },
+    // Termometre ölçüm bitince üç kez öter.
+    olc: (s) => { for (let i = 0; i < 3; i++) ton(2000, 2000, 0.08, "square", 0.05, s - 0.6 + i * 0.18); },
+    yapistir: () => hisirti(0.18, 3000, 1500, "bandpass", 0.18),
+    bak: () => efekt.buyu(),
+    ucur: (s) => hisirti(s, 500, 700, "bandpass", 0.08, 0, 0.5),
+    birak: () => ton(400, 900, 1.2, "sine", 0.1),
+    saril: () => efekt.giy(),
+    ufle: () => hisirti(0.9, 1200, 600, "bandpass", 0.25, 0, 0.6),
   };
 
   // --- Sürekli sesler: TV müziği ve ortam sesi ---

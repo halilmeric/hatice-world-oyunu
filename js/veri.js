@@ -60,7 +60,10 @@ window.OYUN_VERI = {
     // yenir: karakterin ağzına götürülünce yenir. Değer kırıntının rengidir.
     // eylem: elinde tutan karaktere dokununca yaptığı hareket.
     //   at: fırlatır. sur: yerde sürer. Diğerleri elde oynanır:
-    //   konus, oku, ic, fircala, yaz, yika, kurula, sik, dinle, tara, kurut, sula, kaz, kokla, karistir, kumanda.
+    //   konus, oku, ic, fircala, yaz, yika, kurula, sik, dinle, tara, kurut, sula, kaz, kokla, karistir, kumanda,
+    //   olc, yapistir, kes, bak, ucur, birak, saril, ufle.
+    // damla: içerken ağızdan düşen damlanın rengi. buhar: içerken buhar çıkar. ipli: elde ipinin ucundan tutulur.
+    // sonra: eylem bitince eşya bu eşyaya dönüşür (mumu sönen pasta).
     //   giy: karakter üstüne giyer. giy değeri yeridir: govde, alt (pantolon) ya da bas.
     // ocak: ocağın gözüne konabilir. kirilir: hızlı düşünce cam sesi çıkarır.
     top: { resim: "cizimler/esya/top.png", boy: 74, eylem: "at" },
@@ -101,6 +104,19 @@ window.OYUN_VERI = {
     tava: { resim: "cizimler/esya/tava.png", boy: 34, eylem: "karistir", ocak: true },
     bardak: { resim: "cizimler/esya/bardak.png", boy: 50, eylem: "ic", kirilir: true },
     kumanda: { resim: "cizimler/esya/kumanda.png", boy: 50, eylem: "kumanda" },
+    termometre: { resim: "cizimler/esya/termometre.png", boy: 16, eylem: "olc" },
+    "yara-bandi": { resim: "cizimler/esya/yara-bandi.png", boy: 20, eylem: "yapistir" },
+    surup: { resim: "cizimler/esya/surup.png", boy: 60, eylem: "ic", damla: [230, 90, 120] },
+    makas: { resim: "cizimler/esya/makas.png", boy: 36, eylem: "kes" },
+    ayna: { resim: "cizimler/esya/ayna.png", boy: 66, eylem: "bak" },
+    ucurtma: { resim: "cizimler/esya/ucurtma.png", boy: 84, eylem: "ucur" },
+    balon: { resim: "cizimler/esya/balon.png", boy: 120, eylem: "birak", ipli: true },
+    ayi: { resim: "cizimler/esya/ayi.png", boy: 76, eylem: "saril" },
+    tren: { resim: "cizimler/esya/tren.png", boy: 46, eylem: "sur" },
+    cay: { resim: "cizimler/esya/cay.png", boy: 46, eylem: "ic", damla: [190, 70, 40], buhar: true },
+    "sicak-cikolata": { resim: "cizimler/esya/sicak-cikolata.png", boy: 48, eylem: "ic", damla: [120, 70, 40], buhar: true },
+    "dogum-gunu-pastasi": { resim: "cizimler/esya/dogum-gunu-pastasi.png", boy: 78, eylem: "ufle", sonra: "dogum-gunu-pastasi-sonuk" },
+    "dogum-gunu-pastasi-sonuk": { resim: "cizimler/esya/dogum-gunu-pastasi-sonuk.png", boy: 68, yenir: [255, 225, 235] },
     // boya: giyince karakterin kendi kıyafetinin hangi bölgeleri bu renge boyanır (karakterin "kiyafet" verisi).
     elbise: { resim: "cizimler/esya/elbise.png", boy: 150, eylem: "giy", giy: "govde", boya: ["ust", "alt"], renk: [245, 120, 170] },
     "elbise-mor": { resim: "cizimler/esya/elbise-mor.png", boy: 150, eylem: "giy", giy: "govde", boya: ["ust", "alt"], renk: [165, 120, 230] },
@@ -470,6 +486,7 @@ window.OYUN_VERI = {
             { sablon: "ekmek", x: 665, y: 378 }, { sablon: "kurabiye", x: 718, y: 378 }, { sablon: "kurabiye", x: 770, y: 378 },
             { sablon: "pasta", x: 665, y: 427 }, { sablon: "kurabiye", x: 718, y: 427 }, { sablon: "kurabiye", x: 770, y: 427 },
             { sablon: "kupa", x: 1222, y: 330 }, { sablon: "kupa", x: 1200, y: 424 },
+            { sablon: "cay", x: 465, y: 368 }, { sablon: "sicak-cikolata", x: 515, y: 368 },
           ],
         },
         // Yuvarlak masa, iki pembe sandalye ve kanepe.
@@ -519,8 +536,9 @@ window.OYUN_VERI = {
         // Arkadaki büyük raf ve öndeki raf. Alınan oyuncağın yerine yenisi gelir.
         {
           tur: "raf", raflar: [
-            { sablon: "ordek", x: 335, y: 263 }, { sablon: "araba", x: 452, y: 263 }, { sablon: "kup", x: 612, y: 263 },
-            { sablon: "top", x: 605, y: 350 },
+            { sablon: "ordek", x: 335, y: 263 }, { sablon: "araba", x: 452, y: 263 }, { sablon: "tren", x: 545, y: 263 }, { sablon: "kup", x: 612, y: 263 },
+            { sablon: "ayi", x: 330, y: 350 }, { sablon: "top", x: 605, y: 350 },
+            { sablon: "balon", x: 1062, y: 300 },
             { sablon: "boya", x: 400, y: 503 }, { sablon: "araba", x: 490, y: 503 }, { sablon: "kup", x: 570, y: 503 },
             { sablon: "kitap", x: 400, y: 600 }, { sablon: "kova", x: 490, y: 600 }, { sablon: "top", x: 620, y: 600 },
           ],
@@ -549,7 +567,13 @@ window.OYUN_VERI = {
         { tur: "otur", x: 890, y: 365, w: 105, h: 150, oturma: { x: 935, y: 505 } },
         // Kapının yanındaki sabunluk.
         { tur: "musluk", x: 8, y: 328, w: 45, h: 75, su: { x: 28, y: 398, boy: 12, renk: [200, 230, 255] } },
-        { tur: "raf", raflar: [{ sablon: "havlu", x: 1215, y: 548 }, { sablon: "sabun", x: 1235, y: 450 }] },
+        // Araba ve masa: havlu, sabun, termometre, şurup ve ilk yardım çantasından yara bandı.
+        {
+          tur: "raf", raflar: [
+            { sablon: "havlu", x: 1215, y: 548 }, { sablon: "sabun", x: 1235, y: 450 }, { sablon: "termometre", x: 1175, y: 450 },
+            { sablon: "surup", x: 775, y: 352 }, { sablon: "yara-bandi", x: 966, y: 345 },
+          ],
+        },
       ],
     },
     kuafor: {
@@ -569,6 +593,8 @@ window.OYUN_VERI = {
         // Turuncu kanepe.
         { tur: "otur", x: 1090, y: 395, w: 190, h: 170, oturma: { x: 1175, y: 535 } },
         { tur: "tezgah", x: 290, y: 300, w: 335, h: 80, ust: 372 },
+        // Masada makas ve el aynası.
+        { tur: "raf", raflar: [{ sablon: "makas", x: 470, y: 372 }, { sablon: "ayna", x: 575, y: 372 }] },
         { tur: "musluk", x: 705, y: 295, w: 155, h: 90, su: { x: 786, y: 322, boy: 22 } },
         // Su sebili.
         { tur: "musluk", x: 1050, y: 290, w: 65, h: 165, su: { x: 1070, y: 408, boy: 16 } },
@@ -623,6 +649,8 @@ window.OYUN_VERI = {
           ],
         },
         { tur: "tezgah", x: 250, y: 270, w: 505, h: 40, ust: 298 },
+        // Vitrinin üstünde mumlu doğum günü pastası.
+        { tur: "raf", raflar: [{ sablon: "dogum-gunu-pastasi", x: 570, y: 298 }] },
         // Taş fırın: dokununca ateş yanar. Tencere ve tava ateşe konur.
         { tur: "ocak", x: 880, y: 250, w: 165, h: 140, gozler: [{ x: 960, y: 380 }] },
         // Sağdaki tahta masa ve bank, soldaki ön masa.
@@ -676,6 +704,8 @@ window.OYUN_VERI = {
       { id: "ayi1", tur: "karakter", sablon: "ayi", mekan: "park", x: 820, y: 600 },
       { id: "cicek2", tur: "esya", sablon: "cicek", mekan: "park", x: 400, y: 640 },
       { id: "top2", tur: "esya", sablon: "top", mekan: "park", x: 560, y: 660 },
+      { id: "ucurtma1", tur: "esya", sablon: "ucurtma", mekan: "park", x: 680, y: 640 },
+      { id: "balon1", tur: "esya", sablon: "balon", mekan: "park", x: 760, y: 610 },
       { id: "kova2", tur: "esya", sablon: "kova", mekan: "oyun", x: 1100, y: 620 },
       { id: "boya2", tur: "esya", sablon: "boya", mekan: "okul", x: 500, y: 640 },
       { id: "kitap2", tur: "esya", sablon: "kitap", mekan: "okul", x: 760, y: 660 },

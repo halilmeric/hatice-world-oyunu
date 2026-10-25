@@ -649,7 +649,8 @@ k.scene("mekan", (mekanId) => {
     k.tween(0, 1, 1, (t) => { kl.pos.y -= 1; kl.opacity = 1 - t; }).onEnd(() => kl.destroy());
   }
   // Eşyanın hareketi. Yiyecek yenir; atılan eşya fırlar; diğerleri elde bir süre oynatılır.
-  const EYLEM_SURE = { konus: 2.4, oku: 2.6, ic: 1.8, fircala: 2.2, yaz: 2.6, yika: 2.4, kurula: 2.2, sik: 1.2, dinle: 2.4, tara: 2.4, kurut: 2.4, sula: 2.6, kaz: 2.0, kokla: 2.0, karistir: 2.4, kumanda: 1.0 };
+  const EYLEM_SURE = { konus: 2.4, oku: 2.6, ic: 1.8, fircala: 2.2, yaz: 2.6, yika: 2.4, kurula: 2.2, sik: 1.2, dinle: 2.4, tara: 2.4, kurut: 2.4, sula: 2.6, kaz: 2.0, kokla: 2.0, karistir: 2.4, kumanda: 1.0,
+    olc: 2.4, yapistir: 1.4, kes: 2.4, bak: 2.4, ucur: 4.5, birak: 3.4, saril: 2.2, ufle: 1.6 };
   function eylemYap(sahip, o, vardi = false) {
     if (o.yenir) return ye(sahip, o);
     const tur = o.eylemTur;
@@ -684,9 +685,32 @@ k.scene("mekan", (mekanId) => {
     if (tur === "sik") G.nota(o.kok.pos.x, o.kok.pos.y - 40, [250, 190, 40]);
     // Kumanda odadaki TV'yi açar ya da kapatır.
     if (tur === "kumanda") { const tv = noktalar.find((n) => n.tur === "tv"); if (tv) acKapa(tv.isik, tv.anahtar); G.nota(o.kok.pos.x, o.kok.pos.y - 30); }
+    // Uçurtma ve balon: elden eşyaya bir ip çizilir.
+    if (tur === "ucur" || tur === "birak") {
+      o.eylem.ip = k.add([k.z(sahip.kok.z + 0.4), { draw() {
+        if (!o.elde) return;
+        const el = K.elYeri(o.elde.kr, o.v.el), s = o.kok.scale.y, uc = o.kok.pos.sub(0, tur === "ucur" ? o.boy * s * 0.3 : 0);
+        k.drawLine({ p1: el, p2: uc, width: 2, color: KALEM });
+      } }]);
+    }
     k.wait(sure, () => {
       if (o.eylem && o.eylem.kagit) { const kg = o.eylem.kagit; k.wait(1.2, () => kg.destroy()); }
+      if (o.eylem && o.eylem.ip) o.eylem.ip.destroy();
       o.eylem = null;
+      if (!varliklar.includes(o)) return;
+      // Ateş ölçülünce, yara bandı yapışınca ve ayıya sarılınca karakter sevinir.
+      if (["olc", "yapistir", "saril", "bak"].includes(tur) && varliklar.includes(sahip)) kalpCikar(sahip);
+      // Yara bandı yapışınca biter.
+      if (tur === "yapistir") { kaldir(o); dunya.varliklar.splice(dunya.varliklar.indexOf(o.v), 1); kaydet(); return; }
+      // Mumlar üflenince söner. Sönük pasta yenir.
+      if (tur === "ufle") {
+        const yeni = VERI.esyalar[o.v.sablon].sonra, e = VERI.esyalar[yeni];
+        o.v.sablon = yeni; o.boy = e.boy; o.yenir = e.yenir; o.eylemTur = e.eylem;
+        o.kok.children[0].use(k.sprite("esya-" + yeni, { height: e.boy }));
+        SES.buyu();
+        for (let i = 0; i < 6; i++) G.parilti(o.kok.pos.x + k.rand(-30, 30), o.kok.pos.y - o.boy * o.kok.scale.y - k.rand(0, 30));
+        kaydet();
+      }
       if (tur === "sula" && varliklar.includes(sahip)) { const b = enYakinBitki(sahip, 260); if (b) bitkiBuyut(b); }
     });
   }
@@ -1199,7 +1223,9 @@ k.scene("mekan", (mekanId) => {
       const sahip = o.elde, s = derinlik(sahip.zemY) * (1 - o.isirik * 0.25);
       let yer = o.yeniyor ? K.agizYeri(sahip.kr) : K.elYeri(sahip.kr, o.v.el), aci = 0, olc = 1;
       if (o.eylem) ({ yer, aci, olc } = eylemKaresi(o, sahip, s));
-      o.kok.pos = k.vec2(yer.x, yer.y + (o.boy * s * olc) / 2);
+      // İpli eşya (balon) ipin ucundan tutulur: resmin altı eldedir.
+      const ipli = VERI.esyalar[o.v.sablon].ipli && !o.eylem;
+      o.kok.pos = k.vec2(yer.x, yer.y + (ipli ? 0 : (o.boy * s * olc) / 2));
       o.kok.scale = k.vec2(s * olc);
       o.kok.angle = aci;
       o.kok.z = sahip.kok.z + 0.5;
@@ -1218,9 +1244,59 @@ k.scene("mekan", (mekanId) => {
           if (sira(0.1)) G.kopuk(agiz.x + k.rand(-12, 12), agiz.y + k.rand(-6, 6), on, k.rand(3, 6));
           // Fırçanın başı sağ uçtadır: baş ağza gelsin diye eşya sola kayar.
           return { yer: agiz.add(Math.sin(t * 28) * gen * 0.07 - o.en * s * 0.4, 4), aci: 0, olc: 1 };
-        case "ic":
-          if (sira(0.3)) G.kirinti(agiz, [120, 180, 240]);
+        case "ic": {
+          const es = VERI.esyalar[o.v.sablon];
+          if (sira(0.3)) G.kirinti(agiz, es.damla || [120, 180, 240]);
+          // Sıcak içecekten buhar çıkar.
+          if (es.buhar && Math.random() < 0.15) G.kopuk(agiz.x + yon * gen * 0.1 + k.rand(-6, 6), agiz.y - o.boy * s * 0.6, on, k.rand(3, 6));
           return { yer: agiz.add(yon * gen * 0.08, 0), aci: -35 * yon, olc: 1 };
+        }
+        case "olc": {
+          // Termometre ağızda durur. Kırmızı ucu ağızdadır, ucundan parıltı çıkar.
+          if (t > 1.2 && sira(0.3)) G.parilti(agiz.x + yon * o.en * s * 0.8, agiz.y - 10, [240, 80, 80]);
+          return { yer: agiz.add(yon * o.en * s * 0.42, 0), aci: 0, olc: 1 };
+        }
+        case "yapistir": {
+          // Yara bandı yanağa gider ve bastırılır.
+          const yanak = agiz.add(-yon * gen * 0.12, -boyu * 0.04);
+          return { yer: yanak, aci: 15 * yon, olc: 1 + 0.15 * Math.max(0, 1 - t * 2) };
+        }
+        case "kes": {
+          // Makas başın yanında açılıp kapanır, saç kırpıntıları düşer.
+          const bas = agiz.add(0, -boyu * 0.2);
+          if (sira(0.18)) { G.kirinti(bas.add(yon * gen * 0.25, 0), [120, 80, 50]); SES.klik(); }
+          return { yer: bas.add(yon * gen * 0.32 + Math.sin(t * 3) * gen * 0.12, 0), aci: -20 * yon, olc: 1 - 0.15 * Math.abs(Math.sin(t * 18)) };
+        }
+        case "bak": {
+          // Ayna yüzün önünde tutulur, parlar.
+          const on2 = agiz.add(yon * gen * 0.32, -boyu * 0.02);
+          if (sira(0.25)) G.parilti(on2.x + k.rand(-20, 20), on2.y - k.rand(10, 50), [255, 255, 255]);
+          if (t > 1 && Math.random() < 0.02) kucukKalp(agiz.add(0, -boyu * 0.2));
+          return { yer: on2, aci: -8 * yon, olc: 1.1 };
+        }
+        case "ucur": {
+          // Uçurtma yükselir, havada sallanır, sonunda ele iner.
+          const el = K.elYeri(sahip.kr, o.v.el), sure = EYLEM_SURE.ucur;
+          const yuk = Math.min(1, t / 0.8, (sure - t) / 0.6);
+          return { yer: el.add(yon * gen * (0.4 + 0.5 * yuk) + Math.sin(t * 1.7) * 30 * yuk, -boyu * 0.9 * yuk + Math.sin(t * 2.6) * 14 * yuk), aci: Math.sin(t * 2.2) * 14, olc: 1 };
+        }
+        case "birak": {
+          // Balon ipiyle yükselir, sonra yavaşça ele geri iner.
+          const el = K.elYeri(sahip.kr, o.v.el), f = Math.sin(Math.min(1, t / EYLEM_SURE.birak) * Math.PI);
+          return { yer: el.add(Math.sin(t * 2) * 25 * f, -boyu * 0.75 * f - o.boy * s * 0.5), aci: Math.sin(t * 3) * 8, olc: 1 };
+        }
+        case "saril": {
+          // Ayı göğse bastırılır, kalpler çıkar.
+          const gogus = sahip.kok.pos.add(yon * gen * 0.08, -boyu * 0.42);
+          if (sira(0.45)) kucukKalp(gogus.add(k.rand(-gen * 0.2, gen * 0.2), -boyu * 0.3));
+          return { yer: gogus, aci: Math.sin(t * 5) * 6, olc: 1 + Math.abs(Math.sin(t * 5)) * 0.06 };
+        }
+        case "ufle": {
+          // Pasta ağzın önünde durur. Ağızdan mumlara rüzgar gider.
+          const pasta = agiz.add(yon * gen * 0.3, boyu * 0.12);
+          if (sira(0.07)) G.kopuk(agiz.x + yon * (gen * 0.08 + k.rand(0, gen * 0.2)), agiz.y + k.rand(-4, 8), on, k.rand(2, 4));
+          return { yer: pasta, aci: 0, olc: 1 };
+        }
         case "oku":
           return { yer: agiz.add(0, boyu * 0.14), aci: Math.sin(t * 2) * 4, olc: 1.3 };
         case "konus":

@@ -121,6 +121,15 @@ window.SES = (() => {
     gecis() { hisirti(0.35, 400, 1500, "bandpass", 0.12, 0, 0.7); },
     selam() { ton(520, 780, 0.1, "sine", 0.18); ton(780, 660, 0.1, "sine", 0.15, 0.1); },
     hav() { for (const g of [0, 0.25]) { ton(420, 200, 0.12, "sawtooth", 0.12, g); hisirti(0.1, 700, 400, "bandpass", 0.2, g); } },
+    // Kedi sevilince önce "miyav", sonra mırlar.
+    mir() {
+      ton(650, 900, 0.12, "triangle", 0.1); ton(900, 520, 0.3, "triangle", 0.1, 0.12);
+      for (let i = 0; i < 16; i++) hisirti(0.06, 180, 140, "lowpass", 0.35, 0.5 + i * 0.075, 1);
+    },
+    // Kasada okutma: kısa tiz "bip".
+    bip() { ton(1850, 1850, 0.12, "square", 0.08); },
+    // Tebeşir tahtada: kısa cızırtı.
+    tebesir() { hisirti(0.08, 4500, 3500, "bandpass", 0.12, 0, 3); },
     // Ördek sıkılınca "vak".
     vak() { ton(700, 450, 0.18, "sawtooth", 0.1); ton(1200, 800, 0.12, "square", 0.04); },
     // Konuşma: hece hece kısa sesler. Uzun cümle daha uzun konuşur.
@@ -148,7 +157,16 @@ window.SES = (() => {
     dinle: () => { for (let i = 0; i < 4; i++) { ton(90, 60, 0.08, "sine", 0.35, i * 0.6); ton(90, 60, 0.08, "sine", 0.25, i * 0.6 + 0.18); } },
     at: () => hisirti(0.25, 600, 2000, "bandpass", 0.15),
     sur: () => ton(300, 340, 0.6, "sawtooth", 0.04),
+    dok: (s) => { for (let i = 0; i < 12; i++) hisirti(0.04, 2500, 2000, "bandpass", 0.12, i * s / 14, 2); },
     yaz: (s) => { for (let i = 0; i < 8; i++) hisirti(0.05, 4000, 4000, "bandpass", 0.08, i * s / 8, 2); },
+    // Termometre ölçüm bitince üç kez öter.
+    olc: (s) => { for (let i = 0; i < 3; i++) ton(2000, 2000, 0.08, "square", 0.05, s - 0.6 + i * 0.18); },
+    yapistir: () => hisirti(0.18, 3000, 1500, "bandpass", 0.18),
+    bak: () => efekt.buyu(),
+    ucur: (s) => hisirti(s, 500, 700, "bandpass", 0.08, 0, 0.5),
+    birak: () => ton(400, 900, 1.2, "sine", 0.1),
+    saril: () => efekt.giy(),
+    ufle: () => hisirti(0.9, 1200, 600, "bandpass", 0.25, 0, 0.6),
   };
 
   // --- Sürekli sesler: TV müziği ve ortam sesi ---
